@@ -1,18 +1,32 @@
 import os
 import streamlit as st
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+
+# Try different import methods to ensure compatibility
+try:
+    from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+except ImportError:
+    try:
+        from langchain.embeddings.openai import OpenAIEmbeddings
+        from langchain.chat_models import ChatOpenAI
+    except ImportError:
+        from langchain.embeddings import OpenAIEmbeddings
+        from langchain.chat_models import ChatOpenAI
+
 from langchain.document_loaders import WebBaseLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-from langchain.vectorstores import Chroma
+
+try:
+    from langchain_community.vectorstores import Chroma
+except ImportError:
+    from langchain.vectorstores import Chroma
 
 # Set OpenAI API Key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # Page configuration
-st.set_page_config(page_title="Chat with US", page_icon="📚")
+st.set_page_config(page_title="Chat with Website", page_icon="📚")
 st.title("Chat with our website 📚")
 
 # Initialize session state variables
@@ -66,8 +80,11 @@ def initialize_conversation(vectorstore):
         return None
     
     try:
-        # Initialize LLM
-        llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+        # Initialize LLM - try different model names for compatibility
+        try:
+            llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+        except:
+            llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
         
         # Create memory
         memory = ConversationBufferMemory(
@@ -145,17 +162,6 @@ with st.sidebar:
     st.header("ℹ️ About")
     st.write(f"Currently chatting with: {url}")
     
-    # Option to change URL
-    new_url = st.text_input("Enter a different URL:", value=url)
-    if st.button("Load New Website"):
-        if new_url != url:
-            # Reset session state
-            st.session_state.vectorstore = None
-            st.session_state.conversation = None
-            st.session_state.chat_history = []
-            st.session_state.processComplete = None
-            st.rerun()
-    
     # Clear chat button
     if st.button("Clear Chat History"):
         st.session_state.chat_history = []
@@ -170,3 +176,8 @@ with st.sidebar:
         st.success("✅ Website loaded and ready!")
     else:
         st.info("⏳ Loading website content...")
+    
+    # Debug info
+    with st.expander("Debug Info"):
+        st.write("Python version:", st.runtime.exists())
+        st.write("Session state keys:", list(st.session_state.keys()))
