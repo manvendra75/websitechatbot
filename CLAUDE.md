@@ -12,13 +12,13 @@ The application is built using:
 - **Streamlit** - Web interface framework
 - **LangChain** - LLM orchestration and RAG implementation
 - **Google Gemini API** - Language model (gemini-1.5-flash) and embeddings (models/embedding-001)
-- **Chroma** - Vector database for storing document embeddings
+- **FAISS** - Vector database for storing document embeddings
 - **WebBaseLoader** - Website content scraping
 
 The main flow:
 1. Load website content using WebBaseLoader
 2. Split content into chunks using RecursiveCharacterTextSplitter
-3. Create embeddings and store in Chroma vector database
+3. Create embeddings and store in FAISS vector database
 4. Initialize ConversationalRetrievalChain with memory
 5. Handle user queries through the chat interface
 
@@ -48,11 +48,11 @@ The app maintains several session state variables:
 - `conversation` - The ConversationalRetrievalChain instance
 - `chat_history` - List of chat messages
 - `processComplete` - Website loading status flag
-- `vectorstore` - Chroma vector database instance
+- `vectorstore` - FAISS vector database instance
 
 ## Dependencies
 
 Based on the imports, install these packages:
 ```bash
-pip install streamlit langchain-google-genai langchain-community langchain chromadb
+pip install streamlit langchain-google-genai langchain-community langchain faiss-cpu
 ```

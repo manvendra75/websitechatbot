@@ -5,7 +5,7 @@ from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-from langchain_community.vectorstores import Chroma  # Fixed import
+from langchain_community.vectorstores import FAISS
 
 # Set Google API Key
 os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
@@ -53,7 +53,7 @@ def create_vectorstore(_website_data):
         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         
         # Create vector store
-        vectorstore = Chroma.from_documents(splits, embeddings)
+        vectorstore = FAISS.from_documents(splits, embeddings)
         return vectorstore
     except Exception as e:
         st.error(f"Error creating vector store: {str(e)}")
