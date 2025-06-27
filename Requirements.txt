@@ -1,7 +1,26 @@
+# Core packages
 streamlit==1.29.0
-openai==0.28.0
-langchain==0.0.300
-chromadb
-beautifulsoup4
-lxml
-tiktoken
+langchain==0.0.352
+openai==1.6.1
+
+# Vector store
+chromadb==0.4.22
+
+# Web scraping
+beautifulsoup4==4.12.2
+lxml==4.9.3
+html2text==2020.1.16
+
+# Required by LangChain
+tiktoken==0.5.2
+requests==2.31.0
+pydantic==1.10.13
+typing-extensions==4.9.0
+numpy==1.24.3
+SQLAlchemy==1.4.48
+
+# Additional dependencies
+aiohttp==3.9.1
+dataclasses-json==0.6.3
+langsmith==0.0.77
+tenacity==8.2.3
