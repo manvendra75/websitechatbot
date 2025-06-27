@@ -1,12 +1,24 @@
 import os
-os.environ["OPENAI_API_KEY"] = "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"
-from langchain_community.vectorstores import Chroma
+import streamlit as st
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
+# Page configuration
+st.set_page_config(page_title="Chat with US", page_icon="📚")
+st.title("Chat with our website 📚")
+
+# Initialize session state variables
+if "conversation" not in st.session_state:
+    st.session_state.conversation = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "processComplete" not in st.session_state:
+    st.session_state.processComplete = None
 
 def load_website(url):
   loader = WebBasedLoader(url)
