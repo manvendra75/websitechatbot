@@ -1,32 +1,20 @@
 import os
 import streamlit as st
 
-# Try different import methods to ensure compatibility
-try:
-    from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-except ImportError:
-    try:
-        from langchain.embeddings.openai import OpenAIEmbeddings
-        from langchain.chat_models import ChatOpenAI
-    except ImportError:
-        from langchain.embeddings import OpenAIEmbeddings
-        from langchain.chat_models import ChatOpenAI
-
+# Fix for LangChain imports - using the latest structure
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import WebBaseLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-
-try:
-    from langchain_community.vectorstores import Chroma
-except ImportError:
-    from langchain.vectorstores import Chroma
+from langchain.vectorstores import Chroma
 
 # Set OpenAI API Key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # Page configuration
-st.set_page_config(page_title="Chat with Website", page_icon="📚")
+st.set_page_config(page_title="Chat with US", page_icon="📚")
 st.title("Chat with our website 📚")
 
 # Initialize session state variables
@@ -64,14 +52,21 @@ def create_vectorstore(website_data):
         )
         splits = text_splitter.split_documents(website_data)
         
-        # Create embeddings
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        # Create embeddings - using the correct model name
+        embeddings = OpenAIEmbeddings(
+            openai_api_key=st.secrets["OPENAI_API_KEY"],
+            model="text-embedding-ada-002"  # Use standard model name
+        )
         
         # Create vector store
-        vectorstore = Chroma.from_documents(splits, embeddings)
+        vectorstore = Chroma.from_documents(
+            documents=splits, 
+            embedding=embeddings
+        )
         return vectorstore
     except Exception as e:
         st.error(f"Error creating vector store: {str(e)}")
+        st.error(f"Details: {type(e).__name__}")
         return None
 
 def initialize_conversation(vectorstore):
@@ -80,11 +75,12 @@ def initialize_conversation(vectorstore):
         return None
     
     try:
-        # Initialize LLM - try different model names for compatibility
-        try:
-            llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
-        except:
-            llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.7)
+        # Initialize LLM with API key
+        llm = ChatOpenAI(
+            openai_api_key=st.secrets["OPENAI_API_KEY"],
+            model_name="gpt-3.5-turbo",  # Use standard model name
+            temperature=0.7
+        )
         
         # Create memory
         memory = ConversationBufferMemory(
@@ -96,7 +92,8 @@ def initialize_conversation(vectorstore):
         qa = ConversationalRetrievalChain.from_llm(
             llm=llm,
             retriever=vectorstore.as_retriever(),
-            memory=memory
+            memory=memory,
+            verbose=True
         )
         
         return qa
@@ -113,8 +110,9 @@ with st.spinner("Loading website content..."):
         website_data = load_website(url)
         if website_data:
             st.session_state.vectorstore = create_vectorstore(website_data)
-            st.session_state.processComplete = True
-            st.success("Website loaded successfully!")
+            if st.session_state.vectorstore:
+                st.session_state.processComplete = True
+                st.success("Website loaded successfully!")
 
 # Initialize conversation if needed
 if st.session_state.conversation is None and st.session_state.vectorstore is not None:
@@ -156,17 +154,26 @@ if st.session_state.processComplete:
                         st.error("Conversation not initialized. Please refresh the page.")
                 except Exception as e:
                     st.error(f"Error generating response: {str(e)}")
+                    st.error("Please check your OpenAI API key and try again.")
 
 # Sidebar
 with st.sidebar:
     st.header("ℹ️ About")
     st.write(f"Currently chatting with: {url}")
     
+    # Option to change URL
+    new_url = st.text_input("Enter a different URL:", value=url)
+    if st.button("Load New Website"):
+        if new_url != url:
+            # Reset session state
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+    
     # Clear chat button
     if st.button("Clear Chat History"):
         st.session_state.chat_history = []
-        if st.session_state.conversation:
-            # Reset memory in conversation chain
+        if st.session_state.conversation and hasattr(st.session_state.conversation, 'memory'):
             st.session_state.conversation.memory.clear()
         st.rerun()
     
@@ -174,10 +181,12 @@ with st.sidebar:
     st.divider()
     if st.session_state.processComplete:
         st.success("✅ Website loaded and ready!")
+        st.write(f"Messages: {len(st.session_state.chat_history)}")
     else:
         st.info("⏳ Loading website content...")
     
-    # Debug info
-    with st.expander("Debug Info"):
-        st.write("Python version:", st.runtime.exists())
-        st.write("Session state keys:", list(st.session_state.keys()))
+    # Debug section
+    with st.expander("🐛 Debug Info"):
+        st.write("Session State Keys:", list(st.session_state.keys()))
+        st.write("Vector Store:", "✅ Loaded" if st.session_state.vectorstore else "❌ Not loaded")
+        st.write("Conversation:", "✅ Ready" if st.session_state.conversation else "❌ Not initialized")
