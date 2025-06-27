@@ -1,8 +1,0 @@
-streamlit
-langchain
-langchain-google-genai
-langchain-community
-langchain-text-splitters  
-chromadb
-beautifulsoup4
-requests
