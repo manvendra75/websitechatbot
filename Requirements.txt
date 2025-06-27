@@ -1,15 +1,6 @@
 streamlit
-langchain==0.1.0
-langchain-openai==0.0.5
-langchain-community==0.0.10
-chromadb==0.4.22
-beautifulsoup4
-lxml
-requests
-tiktoken
 openai
-# Additional dependencies that might be needed
-pydantic<2.0
-typing-extensions
-numpy
-SQLAlchemy<2.0
+langchain
+chromadb
+beautifulsoup4
+tiktoken
