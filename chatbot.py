@@ -83,7 +83,6 @@ def load_website(url):
         st.error(f"Error loading website: {str(e)}")
         return None
 
-@st.cache_resource
 def create_vectorstore(_website_data, _pdf_files=None):
     """Create vector store from website data and optional PDF files"""
     all_documents = []
@@ -124,10 +123,17 @@ def create_vectorstore(_website_data, _pdf_files=None):
         # Create vector store with combined content
         vectorstore = FAISS.from_documents(splits, embeddings)
         
-        # Log what was processed
+        # Log what was processed with detailed info
         website_count = len(_website_data) if _website_data else 0
         pdf_count = len(_pdf_files) if _pdf_files else 0
+        total_chunks = len(splits)
+        
+        # Count chunks by type
+        website_chunks = sum(1 for chunk in splits if chunk.metadata.get('type') == 'website')
+        pdf_chunks = sum(1 for chunk in splits if chunk.metadata.get('type') == 'pdf')
+        
         st.success(f"✅ Vector store created with {website_count} website docs and {pdf_count} PDF files")
+        st.info(f"📊 Total chunks: {total_chunks} (Website: {website_chunks}, PDF: {pdf_chunks})")
         
         return vectorstore
     except Exception as e:
@@ -213,6 +219,11 @@ if st.session_state.processComplete:
                         # Get relevant documents first
                         retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
                         source_docs = retriever.get_relevant_documents(user_input)
+                        
+                        # Debug: Show what was retrieved
+                        pdf_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'pdf')
+                        website_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'website')
+                        st.caption(f"🔍 Retrieved: {website_docs_found} website chunks, {pdf_docs_found} PDF chunks")
                         
                         # Combine context from retrieved documents
                         context = "\n\n".join([doc.page_content for doc in source_docs])
