@@ -262,9 +262,8 @@ Answer:"""
 BACKEND_CONFIG = {
     "website_url": "https://www.holidayme.com",
     "pdf_files": [
-        # Add your PDF file paths here when you have them
-        # "/path/to/your/pdf1.pdf",
-        # "/path/to/your/pdf2.pdf",
+        "docs/Holidayme_RAG.pdf",  # HolidayMe service document
+        # Add more PDF file paths here
     ]
 }
 
