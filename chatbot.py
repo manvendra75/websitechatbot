@@ -99,6 +99,13 @@ def create_vectorstore(_website_data, _pdf_files=None):
         try:
             # Extract text from PDFs
             pdf_text_data = extract_pdf_text(_pdf_files)
+            st.write(f"📄 Extracted text from {len(pdf_text_data)} PDF files")
+            
+            # Show preview of PDF content for debugging
+            for i, pdf_data in enumerate(pdf_text_data[:2]):  # Show first 2 PDFs
+                preview = pdf_data['content'][:500] + "..." if len(pdf_data['content']) > 500 else pdf_data['content']
+                st.text(f"PDF {i+1} preview: {preview}")
+            
             # Convert to Document objects
             pdf_documents = pdf_to_documents(pdf_text_data)
             all_documents.extend(pdf_documents)
@@ -224,6 +231,13 @@ if st.session_state.processComplete:
                         pdf_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'pdf')
                         website_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'website')
                         st.caption(f"🔍 Retrieved: {website_docs_found} website chunks, {pdf_docs_found} PDF chunks")
+                        
+                        # If no PDF docs found, try searching specifically for PDF content
+                        if pdf_docs_found == 0 and st.session_state.vectorstore:
+                            # Try a broader search to see if ANY PDF content exists
+                            all_docs = st.session_state.vectorstore.similarity_search("", k=20)
+                            total_pdf_chunks = sum(1 for doc in all_docs if doc.metadata.get('type') == 'pdf')
+                            st.caption(f"📊 Total PDF chunks in vector store: {total_pdf_chunks}")
                         
                         # Combine context from retrieved documents
                         context = "\n\n".join([doc.page_content for doc in source_docs])
