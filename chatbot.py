@@ -29,6 +29,10 @@ if "vectorstore" not in st.session_state:
 if "pdf_docs" not in st.session_state:
     st.session_state.pdf_docs = None
 
+# Force reset conversation if it's the old type
+if "conversation" in st.session_state and hasattr(st.session_state.conversation, 'memory'):
+    st.session_state.conversation = None
+
 def extract_pdf_text(pdf_files):
     """Extract text from uploaded PDF files"""
     text_content = []
@@ -205,7 +209,7 @@ if st.session_state.processComplete:
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
-                    if st.session_state.conversation:
+                    if st.session_state.conversation and isinstance(st.session_state.conversation, dict):
                         # Get relevant documents first
                         retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
                         source_docs = retriever.get_relevant_documents(user_input)
@@ -236,6 +240,11 @@ if st.session_state.processComplete:
                             "role": "assistant", 
                             "content": response
                         })
+                    elif st.session_state.conversation:
+                        # Old conversation object detected, reset it
+                        st.session_state.conversation = None
+                        st.error("Conversation reset. Please refresh the page or ask your question again.")
+                        st.rerun()
                     else:
                         st.error("Conversation not initialized. Please refresh the page.")
                 except Exception as e:
