@@ -1,347 +1,79 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streamlit Chat Widget Demo</title>
-    <style>
-        /* Chat Button */
-        .chat-button {
+script>
+// Load chat widget
+(function() {
+    var chatWidget = document.createElement('div');
+    chatWidget.innerHTML = `
+        <button id="holidayme-chat-btn" style="
             position: fixed;
             bottom: 20px;
             right: 20px;
             width: 60px;
             height: 60px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 9998;
-        }
-
-        .chat-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .chat-button svg {
-            width: 30px;
-            height: 30px;
-            fill: white;
-        }
-
-        /* Chat Widget Container */
-        .chat-widget {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            font-size: 24px;
+            color: white;
+        ">🏖️</button>
+        
+        <div id="holidayme-chat-window" style="
             position: fixed;
-            bottom: 100px;
+            bottom: 90px;
             right: 20px;
             width: 400px;
             height: 600px;
-            max-height: 80vh;
             background: white;
             border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
-            transform: scale(0);
-            opacity: 0;
-            transform-origin: bottom right;
-            z-index: 9999;
-        }
-
-        .chat-widget.open {
-            transform: scale(1);
-            opacity: 1;
-        }
-
-        /* Chat Header */
-        .chat-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px 15px 0 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .chat-header h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .chat-header-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .header-button {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.3s ease;
-        }
-
-        .header-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        .header-button svg {
-            width: 16px;
-            height: 16px;
-            fill: white;
-        }
-
-        /* Chat Body (iframe container) */
-        .chat-body {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            background: #f5f5f5;
-        }
-
-        .chat-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: white;
-        }
-
-        /* Loading Spinner */
-        .loading-spinner {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 450px) {
-            .chat-widget {
-                width: 100%;
-                height: 100%;
-                max-height: 100%;
-                right: 0;
-                bottom: 0;
-                border-radius: 0;
-            }
-
-            .chat-header {
-                border-radius: 0;
-            }
-
-            .chat-button {
-                bottom: 20px;
-                right: 20px;
-            }
-        }
-
-        /* Minimize State */
-        .chat-widget.minimized {
-            height: 60px;
-            width: 300px;
-        }
-
-        .chat-widget.minimized .chat-body {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
             display: none;
-        }
-
-        /* Demo Page Styles */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f0f2f5;
-        }
-
-        .demo-content {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        h1 {
-            color: #333;
-            margin-top: 0;
-        }
-
-        .code-block {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px 0;
-            overflow-x: auto;
-        }
-
-        .code-block code {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <!-- Demo Content -->
-    <div class="demo-content">
-        <h1>Streamlit Chat Widget Demo</h1>
-        <p>This page demonstrates how to embed your Streamlit chatbot as an overlay widget on any website.</p>
-        
-        <h2>Features:</h2>
-        <ul>
-            <li>Floating chat button in bottom-right corner</li>
-            <li>Smooth open/close animations</li>
-            <li>Minimize functionality</li>
-            <li>Mobile responsive</li>
-            <li>Professional design</li>
-        </ul>
-
-        <h2>Integration Code:</h2>
-        <div class="code-block">
-            <code>
-                &lt;!-- Add this to your website --&gt;<br>
-                &lt;script src="https://your-domain.com/chat-widget.js"&gt;&lt;/script&gt;
-            </code>
-        </div>
-
-        <p>Click the chat button in the bottom-right corner to see it in action!</p>
-    </div>
-
-    <!-- Chat Button -->
-    <button class="chat-button" onclick="toggleChat()" id="chatButton">
-        <svg viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L1 23l6.71-1.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.41 0-2.73-.37-3.88-1.03l-.28-.16-2.9.85.85-2.9-.16-.28C4.97 14.73 4.6 13.41 4.6 12c0-4.42 3.58-8 8-8s8 3.58 8 8-3.58 8-8 8zm4.25-6.03c-.23-.12-1.37-.67-1.58-.75-.21-.08-.37-.12-.52.12-.15.24-.59.75-.73.91-.13.15-.27.17-.5.05-.23-.12-.97-.36-1.85-1.15-.68-.62-1.14-1.38-1.27-1.61-.13-.24-.01-.36.1-.48.1-.11.23-.29.34-.44.12-.15.15-.25.23-.41.08-.17.04-.31-.02-.44-.05-.12-.52-1.27-.72-1.74-.19-.46-.39-.39-.52-.4-.14-.01-.29-.01-.44-.01-.15 0-.4.06-.61.29-.21.23-.8.78-.8 1.91 0 1.13.82 2.22.93 2.37.12.15 1.61 2.46 3.91 3.45.55.24.97.38 1.31.48.55.17 1.05.14 1.44.09.44-.06 1.37-.56 1.56-1.1.19-.55.19-1.02.13-1.12-.05-.09-.19-.14-.41-.26z"/>
-        </svg>
-    </button>
-
-    <!-- Chat Widget -->
-    <div class="chat-widget" id="chatWidget">
-        <div class="chat-header">
-            <h3>Chat with Us</h3>
-            <div class="chat-header-buttons">
-                <button class="header-button" onclick="minimizeChat()" title="Minimize">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 13H5v-2h14v2z"/>
-                    </svg>
-                </button>
-                <button class="header-button" onclick="closeChat()" title="Close">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                </button>
+            overflow: hidden;
+        ">
+            <div style="
+                background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+                color: white;
+                padding: 15px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <h3 style="margin: 0; font-size: 16px;">🏖️ HolidayMe Assistant</h3>
+                <button id="holidayme-chat-close" style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 20px;
+                    cursor: pointer;
+                ">×</button>
             </div>
-        </div>
-        <div class="chat-body">
-            <div class="loading-spinner" id="loadingSpinner"></div>
             <iframe 
-                id="chatIframe"
-                class="chat-iframe" 
-                src=""
-                onload="hideLoader()"
-                style="display: none;"
-            ></iframe>
+                src="YOUR_STREAMLIT_APP_URL" 
+                style="width: 100%; height: calc(100% - 60px); border: none;"
+                title="HolidayMe Chat Assistant">
+            </iframe>
         </div>
-    </div>
-
-    <script>
-        // Configuration
-        const STREAMLIT_URL = 'https://holidayme.streamlit.app'; // Replace with your Streamlit URL
-        
-        let chatOpen = false;
-        let chatMinimized = false;
-        let iframeLoaded = false;
-
-        function toggleChat() {
-            if (chatMinimized) {
-                chatMinimized = false;
-                document.getElementById('chatWidget').classList.remove('minimized');
-            } else if (chatOpen) {
-                closeChat();
-            } else {
-                openChat();
-            }
-        }
-
-        function openChat() {
-            chatOpen = true;
-            const widget = document.getElementById('chatWidget');
-            const iframe = document.getElementById('chatIframe');
-            
-            widget.classList.add('open');
-            
-            // Load iframe only once
-            if (!iframeLoaded) {
-                iframe.src = `${STREAMLIT_URL}/?embedded=true`;
-                iframeLoaded = true;
-            }
-        }
-
-        function closeChat() {
-            chatOpen = false;
-            chatMinimized = false;
-            document.getElementById('chatWidget').classList.remove('open', 'minimized');
-        }
-
-        function minimizeChat() {
-            chatMinimized = true;
-            document.getElementById('chatWidget').classList.add('minimized');
-        }
-
-        function hideLoader() {
-            document.getElementById('loadingSpinner').style.display = 'none';
-            document.getElementById('chatIframe').style.display = 'block';
-        }
-
-        // Optional: Add keyboard shortcut (Ctrl/Cmd + Shift + C)
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
-                toggleChat();
-            }
-        });
-
-        // Optional: Show chat button with animation after page load
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.getElementById('chatButton').style.animation = 'pulse 2s infinite';
-            }, 2000);
-        });
-
-        // Pulse animation for chat button
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes pulse {
-                0% { box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
-                50% { box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6); }
-                100% { box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
-</body>
-</html>
+    `;
+    
+    document.body.appendChild(chatWidget);
+    
+    // Event handlers
+    var isOpen = false;
+    var btn = document.getElementById('holidayme-chat-btn');
+    var window = document.getElementById('holidayme-chat-window');
+    var close = document.getElementById('holidayme-chat-close');
+    
+    btn.onclick = function() {
+        isOpen = !isOpen;
+        window.style.display = isOpen ? 'block' : 'none';
+    };
+    
+    close.onclick = function() {
+        isOpen = false;
+        window.style.display = 'none';
+    };
+})();
+</script>
+```

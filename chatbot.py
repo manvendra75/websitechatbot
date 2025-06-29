@@ -60,8 +60,8 @@ st.markdown("""
 # Compact header for iframe
 st.markdown("""
 <div class="main-header">
-    <h2>🏖️ HolidayMe Assistant</h2>
-    <p>Ask me anything about our services and travel packages!</p>
+    <h2>🏖️ HolidayMe AI Assistant</h2>
+    <p>Your personal travel companion for Umrah, Dubai, Maldives & more!</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -224,6 +224,24 @@ def create_vectorstore_from_documents(documents):
         st.error(f"Error creating vector store: {str(e)}")
         return None
 
+def get_holidayme_response(question):
+    """Handle common identity and contact questions with predefined HolidayMe responses"""
+    question_lower = question.lower()
+    
+    # Identity questions
+    if any(phrase in question_lower for phrase in ["who are you", "what are you", "are you openai", "are you chatgpt", "are you ai"]):
+        return """I'm the HolidayMe AI Assistant, here to help you with all your travel needs! I can assist you with information about our travel packages, services, bookings, and answer any questions you have about destinations like Dubai, Maldives, Umrah packages, and more. How can I help you plan your perfect holiday today?"""
+    
+    # Contact information questions
+    if any(phrase in question_lower for phrase in ["contact", "phone", "number", "call", "email", "reach you"]):
+        return """For direct contact with HolidayMe, please visit our website at https://www.holidayme.com where you'll find all our contact information, including phone numbers, email addresses, and live chat options. Our customer service team is ready to assist you with bookings, inquiries, and travel planning. You can also find our contact details and booking options directly on our website."""
+    
+    # Office/location questions
+    if any(phrase in question_lower for phrase in ["office", "location", "address", "where are you located"]):
+        return """HolidayMe has offices and operations across multiple locations to serve our customers better. For specific office addresses and locations, please visit https://www.holidayme.com or contact our customer service team. We're here to help you regardless of your location and can assist with travel planning worldwide."""
+    
+    return None  # No predefined response, use RAG
+
 def initialize_conversation(vectorstore):
     """Initialize a simple LLM chain to avoid memory issues"""
     if vectorstore is None:
@@ -233,8 +251,22 @@ def initialize_conversation(vectorstore):
         # Initialize LLM
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Create a prompt template with conversation history
-        prompt_template = """Use the following context to answer the question. Consider the conversation history for context, but focus on the current question.
+        # Create a prompt template with HolidayMe persona and conversation history
+        prompt_template = """You are the HolidayMe AI Assistant, representing HolidayMe - a leading travel technology company and travel agency. You help customers with travel packages, bookings, and travel-related inquiries.
+
+IMPORTANT IDENTITY GUIDELINES:
+- You work for HolidayMe and represent the company
+- Never mention that you are OpenAI, ChatGPT, or any other AI company
+- Always respond as a HolidayMe customer service representative
+- For contact information, refer customers to HolidayMe's official channels
+- Be helpful, professional, and knowledgeable about travel services
+
+HolidayMe Contact Information:
+- Website: https://www.holidayme.com
+- For bookings and inquiries, customers should visit the website or contact through official channels
+- Available services include: Umrah packages, Dubai tours, Maldives resorts, visa assistance, and more
+
+Use the following context to answer the question. Consider the conversation history for context, but focus on the current question.
 
 Context: {context}
 
@@ -243,7 +275,7 @@ Conversation History:
 
 Current Question: {question}
 
-Answer:"""
+Answer as the HolidayMe AI Assistant:"""
         
         prompt = PromptTemplate(
             template=prompt_template,
@@ -341,7 +373,7 @@ if st.session_state.processComplete:
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Chat input with placeholder for HolidayMe
-    user_input = st.chat_input("Ask about our travel packages, services, or any questions...")
+    user_input = st.chat_input("Ask about Umrah packages, Dubai tours, Maldives resorts, or any travel questions...")
     
     if user_input:
         # Add user message to chat history
@@ -356,56 +388,66 @@ if st.session_state.processComplete:
             with st.spinner("Thinking..."):
                 try:
                     if st.session_state.conversation and isinstance(st.session_state.conversation, dict):
-                        # Get relevant documents first
-                        retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
-                        source_docs = retriever.get_relevant_documents(user_input)
+                        # Check for predefined HolidayMe responses first
+                        predefined_response = get_holidayme_response(user_input)
                         
-                        # Optional: Show what was retrieved (can be removed for cleaner UI)
-                        # pdf_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'pdf')
-                        # website_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'website')
-                        # st.caption(f"🔍 Retrieved: {website_docs_found} website chunks, {pdf_docs_found} PDF chunks")
-                        
-                        # Combine context from retrieved documents
-                        context = "\n\n".join([doc.page_content for doc in source_docs])
-                        
-                        # Format chat history for the prompt
-                        chat_history = ""
-                        if st.session_state.chat_history:
-                            # Get last 6 messages (3 exchanges) for context
-                            recent_history = st.session_state.chat_history[-6:]
-                            for msg in recent_history:
-                                role = "Human" if msg["role"] == "user" else "Assistant"
-                                chat_history += f"{role}: {msg['content']}\n"
+                        if predefined_response:
+                            # Use predefined response for identity/contact questions
+                            response = predefined_response
+                            st.write(response)
+                            
+                            # Add assistant response to chat history
+                            st.session_state.chat_history.append({
+                                "role": "assistant", 
+                                "content": response
+                            })
                         else:
-                            chat_history = "No previous conversation."
-                        
-                        # Get response from LLM chain
-                        llm_chain = st.session_state.conversation["llm_chain"]
-                        result = llm_chain.run(
-                            context=context, 
-                            chat_history=chat_history,
-                            question=user_input
-                        )
-                        response = result
-                        st.write(response)
-                        
-                        # Show source information
-                        if source_docs:
-                            with st.expander("📚 Sources"):
-                                sources = set()  # Use set to avoid duplicates
-                                for doc in source_docs:
-                                    source_type = doc.metadata.get('type', 'unknown')
-                                    source_name = doc.metadata.get('source', 'Unknown source')
-                                    sources.add(f"{source_type.title()}: {source_name}")
-                                
-                                for source in sorted(sources):
-                                    st.text(f"• {source}")
-                        
-                        # Add assistant response to chat history
-                        st.session_state.chat_history.append({
-                            "role": "assistant", 
-                            "content": response
-                        })
+                            # Use RAG for travel-related questions
+                            # Get relevant documents first
+                            retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
+                            source_docs = retriever.get_relevant_documents(user_input)
+                            
+                            # Combine context from retrieved documents
+                            context = "\n\n".join([doc.page_content for doc in source_docs])
+                            
+                            # Format chat history for the prompt
+                            chat_history = ""
+                            if st.session_state.chat_history:
+                                # Get last 6 messages (3 exchanges) for context
+                                recent_history = st.session_state.chat_history[-6:]
+                                for msg in recent_history:
+                                    role = "Human" if msg["role"] == "user" else "Assistant"
+                                    chat_history += f"{role}: {msg['content']}\n"
+                            else:
+                                chat_history = "No previous conversation."
+                            
+                            # Get response from LLM chain
+                            llm_chain = st.session_state.conversation["llm_chain"]
+                            result = llm_chain.run(
+                                context=context, 
+                                chat_history=chat_history,
+                                question=user_input
+                            )
+                            response = result
+                            st.write(response)
+                            
+                            # Show source information for RAG responses
+                            if source_docs:
+                                with st.expander("📚 Sources"):
+                                    sources = set()  # Use set to avoid duplicates
+                                    for doc in source_docs:
+                                        source_type = doc.metadata.get('type', 'unknown')
+                                        source_name = doc.metadata.get('source', 'Unknown source')
+                                        sources.add(f"{source_type.title()}: {source_name}")
+                                    
+                                    for source in sorted(sources):
+                                        st.text(f"• {source}")
+                            
+                            # Add assistant response to chat history
+                            st.session_state.chat_history.append({
+                                "role": "assistant", 
+                                "content": response
+                            })
                     elif st.session_state.conversation:
                         # Old conversation object detected, reset it
                         st.session_state.conversation = None
