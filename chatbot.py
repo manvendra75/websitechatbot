@@ -61,7 +61,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h2>🏖️ HolidayMe AI Assistant</h2>
-    <p>Your personal travel companion for Umrah, Dubai, Maldives & more!</p>
+    <p>B2B Travel Technology Solutions & Platform Support</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -230,15 +230,15 @@ def get_holidayme_response(question):
     
     # Identity questions
     if any(phrase in question_lower for phrase in ["who are you", "what are you", "are you openai", "are you chatgpt", "are you ai"]):
-        return """I'm the HolidayMe AI Assistant, here to help you with all your travel needs! I can assist you with information about our travel packages, services, bookings, and answer any questions you have about destinations like Dubai, Maldives, Umrah packages, and more. How can I help you plan your perfect holiday today?"""
+        return """I'm the HolidayMe AI Assistant, representing HolidayMe - a leading B2B travel technology company. I help travel industry professionals, tourism boards, travel agencies, and other travel businesses understand our technology solutions and platforms. We provide innovative travel technology services to empower travel companies and destinations worldwide. How can I assist you with information about our B2B travel technology solutions?"""
     
     # Contact information questions
     if any(phrase in question_lower for phrase in ["contact", "phone", "number", "call", "email", "reach you"]):
-        return """For direct contact with HolidayMe, please visit our website at https://www.holidayme.com where you'll find all our contact information, including phone numbers, email addresses, and live chat options. Our customer service team is ready to assist you with bookings, inquiries, and travel planning. You can also find our contact details and booking options directly on our website."""
+        return """For business inquiries and partnerships, please visit our website at https://www.holidayme.com where you'll find all our contact information, including phone numbers, email addresses, and business contact options. Our business development team is ready to assist you with technology solutions, platform integrations, and partnership opportunities. You can also find our business contact details directly on our website."""
     
     # Office/location questions
     if any(phrase in question_lower for phrase in ["office", "location", "address", "where are you located"]):
-        return """HolidayMe has offices and operations across multiple locations to serve our customers better. For specific office addresses and locations, please visit https://www.holidayme.com or contact our customer service team. We're here to help you regardless of your location and can assist with travel planning worldwide."""
+        return """HolidayMe has offices and operations across multiple locations to serve our business partners and clients globally. For specific office addresses and locations, please visit https://www.holidayme.com or contact our business development team. We're here to support travel industry professionals worldwide with our technology solutions and platforms."""
     
     return None  # No predefined response, use RAG
 
@@ -252,19 +252,21 @@ def initialize_conversation(vectorstore):
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
         # Create a prompt template with HolidayMe persona and conversation history
-        prompt_template = """You are the HolidayMe AI Assistant, representing HolidayMe - a leading travel technology company and travel agency. You help customers with travel packages, bookings, and travel-related inquiries.
+        prompt_template = """You are the HolidayMe AI Assistant, representing HolidayMe - a leading B2B travel technology company. You help travel industry partners, tourism boards, travel agencies, and other travel professionals with information about our technology solutions, platforms, and services.
 
 IMPORTANT IDENTITY GUIDELINES:
 - You work for HolidayMe and represent the company
+- HolidayMe is a B2B travel technology company, NOT a direct travel booking agency
 - Never mention that you are OpenAI, ChatGPT, or any other AI company
-- Always respond as a HolidayMe customer service representative
-- For contact information, refer customers to HolidayMe's official channels
-- Be helpful, professional, and knowledgeable about travel services
+- Always respond as a HolidayMe technology consultant/representative
+- For business inquiries, refer partners to HolidayMe's official channels
+- Be helpful, professional, and knowledgeable about travel technology solutions
 
-HolidayMe Contact Information:
+HolidayMe Company Information:
 - Website: https://www.holidayme.com
-- For bookings and inquiries, customers should visit the website or contact through official channels
-- Available services include: Umrah packages, Dubai tours, Maldives resorts, visa assistance, and more
+- B2B travel technology solutions provider
+- Serves tourism boards, travel companies, and industry partners
+- Technology platforms for travel businesses, not direct consumer bookings
 
 Use the following context to answer the question. Consider the conversation history for context, but focus on the current question.
 
@@ -373,7 +375,7 @@ if st.session_state.processComplete:
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Chat input with placeholder for HolidayMe
-    user_input = st.chat_input("Ask about Umrah packages, Dubai tours, Maldives resorts, or any travel questions...")
+    user_input = st.chat_input("Ask about our B2B travel technology solutions, platforms, or partnership opportunities...")
     
     if user_input:
         # Add user message to chat history

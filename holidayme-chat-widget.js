@@ -21,7 +21,7 @@ window.HolidaymeChatWidget = (function() {
         text: {
             buttonTooltip: 'Chat with HolidayMe Assistant',
             headerTitle: '🏖️ HolidayMe Assistant',
-            headerSubtitle: 'How can we help you today?'
+            headerSubtitle: 'B2B Travel Technology Solutions'
         }
     };
     

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Streamlit-based website chatbot that uses OpenAI's GPT-4 and embeddings to create a conversational interface for querying website content and backend PDF documents. The application automatically loads content from a configured website and backend PDF files, creates vector embeddings of the combined content, and provides a clean chat interface optimized for iframe embedding on production websites.
+This is a Streamlit-based B2B chatbot that uses OpenAI's GPT-4 and embeddings to create a conversational interface for HolidayMe's travel technology solutions. The application automatically loads content from the HolidayMe website and backend PDF documents, creates vector embeddings of the combined content, and provides a clean chat interface optimized for iframe embedding to assist travel industry professionals with technology solutions and platform information.
 
 ## Architecture
 
