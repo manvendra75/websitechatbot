@@ -3,7 +3,7 @@ import streamlit as st
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.chains import ConversationalRetrievalChain
+from langchain.chains import ConversationalRetrievalChain, RetrievalQA
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import FAISS
 from PyPDF2 import PdfReader
@@ -135,20 +135,15 @@ def initialize_conversation(vectorstore):
         return None
     
     try:
-        # Initialize LLM with enhanced system prompt
+        # Initialize LLM
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Create memory
-        memory = ConversationBufferMemory(
-            memory_key="chat_history", 
-            return_messages=True
-        )
-        
-        # Create conversation chain without return_source_documents to avoid memory issues
-        qa = ConversationalRetrievalChain.from_llm(
+        # Use RetrievalQA instead of ConversationalRetrievalChain to avoid memory issues
+        qa = RetrievalQA.from_chain_type(
             llm=llm,
-            retriever=vectorstore.as_retriever(search_kwargs={"k": 6}),  # Retrieve more docs
-            memory=memory
+            chain_type="stuff",
+            retriever=vectorstore.as_retriever(search_kwargs={"k": 6}),
+            return_source_documents=False  # Don't return source docs to avoid memory conflicts
         )
         
         return qa
@@ -201,9 +196,9 @@ if st.session_state.processComplete:
             with st.spinner("Thinking..."):
                 try:
                     if st.session_state.conversation:
-                        # Get the answer from conversation
-                        result = st.session_state.conversation({"question": user_input})
-                        response = result['answer']
+                        # Get the answer from RetrievalQA (uses 'query' key instead of 'question')
+                        result = st.session_state.conversation({"query": user_input})
+                        response = result['result']  # RetrievalQA returns 'result' instead of 'answer'
                         st.write(response)
                         
                         # Manually retrieve source documents for display
@@ -285,9 +280,6 @@ with st.sidebar:
     # Clear chat button
     if st.button("Clear Chat History"):
         st.session_state.chat_history = []
-        if st.session_state.conversation:
-            # Reset memory in conversation chain
-            st.session_state.conversation.memory.clear()
         st.rerun()
     
     # Display status
