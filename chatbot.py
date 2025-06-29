@@ -3,7 +3,8 @@ import streamlit as st
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.chains import ConversationalRetrievalChain, RetrievalQA
+from langchain.chains import ConversationalRetrievalChain, RetrievalQA, LLMChain
+from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import FAISS
 from PyPDF2 import PdfReader
@@ -130,7 +131,7 @@ def create_vectorstore(_website_data, _pdf_files=None):
         return None
 
 def initialize_conversation(vectorstore):
-    """Initialize the conversation chain"""
+    """Initialize a simple LLM chain to avoid memory issues"""
     if vectorstore is None:
         return None
     
@@ -138,15 +139,24 @@ def initialize_conversation(vectorstore):
         # Initialize LLM
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Use RetrievalQA instead of ConversationalRetrievalChain to avoid memory issues
-        qa = RetrievalQA.from_chain_type(
-            llm=llm,
-            chain_type="stuff",
-            retriever=vectorstore.as_retriever(search_kwargs={"k": 6}),
-            return_source_documents=False  # Don't return source docs to avoid memory conflicts
+        # Create a simple prompt template
+        prompt_template = """Use the following context to answer the question. If you cannot find the answer in the context, say so.
+
+Context: {context}
+
+Question: {question}
+
+Answer:"""
+        
+        prompt = PromptTemplate(
+            template=prompt_template,
+            input_variables=["context", "question"]
         )
         
-        return qa
+        # Create simple LLM chain
+        llm_chain = LLMChain(llm=llm, prompt=prompt)
+        
+        return {"llm_chain": llm_chain, "vectorstore": vectorstore}
     except Exception as e:
         st.error(f"Error initializing conversation: {str(e)}")
         return None
@@ -196,28 +206,30 @@ if st.session_state.processComplete:
             with st.spinner("Thinking..."):
                 try:
                     if st.session_state.conversation:
-                        # Get the answer from RetrievalQA (uses 'question' key)
-                        result = st.session_state.conversation({"question": user_input})
-                        response = result['result']  # RetrievalQA returns 'result' instead of 'answer'
+                        # Get relevant documents first
+                        retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
+                        source_docs = retriever.get_relevant_documents(user_input)
+                        
+                        # Combine context from retrieved documents
+                        context = "\n\n".join([doc.page_content for doc in source_docs])
+                        
+                        # Get response from LLM chain
+                        llm_chain = st.session_state.conversation["llm_chain"]
+                        result = llm_chain.run(context=context, question=user_input)
+                        response = result
                         st.write(response)
                         
-                        # Manually retrieve source documents for display
-                        try:
-                            retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
-                            source_docs = retriever.get_relevant_documents(user_input)
-                            
-                            if source_docs:
-                                with st.expander("📚 Sources"):
-                                    sources = set()  # Use set to avoid duplicates
-                                    for doc in source_docs:
-                                        source_type = doc.metadata.get('type', 'unknown')
-                                        source_name = doc.metadata.get('source', 'Unknown source')
-                                        sources.add(f"{source_type.title()}: {source_name}")
-                                    
-                                    for source in sorted(sources):
-                                        st.text(f"• {source}")
-                        except Exception as source_error:
-                            st.text("Sources not available")
+                        # Show source information
+                        if source_docs:
+                            with st.expander("📚 Sources"):
+                                sources = set()  # Use set to avoid duplicates
+                                for doc in source_docs:
+                                    source_type = doc.metadata.get('type', 'unknown')
+                                    source_name = doc.metadata.get('source', 'Unknown source')
+                                    sources.add(f"{source_type.title()}: {source_name}")
+                                
+                                for source in sorted(sources):
+                                    st.text(f"• {source}")
                         
                         # Add assistant response to chat history
                         st.session_state.chat_history.append({
