@@ -1,14 +1,14 @@
 import os
 import streamlit as st
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import FAISS
 
-# Set Google API Key
-os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+# Set OpenAI API Key
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # Page configuration
 st.set_page_config(page_title="Chat with US", page_icon="📚")
@@ -50,7 +50,7 @@ def create_vectorstore(_website_data):
         splits = text_splitter.split_documents(_website_data)
         
         # Create embeddings
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         
         # Create vector store
         vectorstore = FAISS.from_documents(splits, embeddings)
@@ -66,7 +66,7 @@ def initialize_conversation(vectorstore):
     
     try:
         # Initialize LLM
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
         # Create memory
         memory = ConversationBufferMemory(

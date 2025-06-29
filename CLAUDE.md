@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Streamlit-based website chatbot that uses Google's Gemini AI and embeddings to create a conversational interface for querying website content. The application scrapes a specified website, creates vector embeddings of the content, and provides a chat interface where users can ask questions about the website's information.
+This is a Streamlit-based website chatbot that uses OpenAI's GPT-4 and embeddings to create a conversational interface for querying website content. The application scrapes a specified website, creates vector embeddings of the content, and provides a chat interface where users can ask questions about the website's information.
 
 ## Architecture
 
 The application is built using:
 - **Streamlit** - Web interface framework
 - **LangChain** - LLM orchestration and RAG implementation
-- **Google Gemini API** - Language model (gemini-1.5-flash) and embeddings (models/embedding-001)
+- **OpenAI API** - Language model (gpt-4o) and embeddings (text-embedding-3-small)
 - **FAISS** - Vector database for storing document embeddings
 - **WebBaseLoader** - Website content scraping
 
@@ -30,10 +30,10 @@ streamlit run chatbot.py
 
 ## Configuration
 
-- Google API key is configured in `.streamlit/secrets.toml` with the key `GOOGLE_API_KEY`
+- OpenAI API key is configured in `.streamlit/secrets.toml` with the key `OPENAI_API_KEY`
 - Default website URL is hardcoded to "https://www.holidayme.com" in `chatbot.py:90`
-- Embedding model: `models/embedding-001`
-- Chat model: `gemini-1.5-flash` with temperature 0.7
+- Embedding model: `text-embedding-3-small`
+- Chat model: `gpt-4o` with temperature 0.7
 - Text splitting: 1000 character chunks with 200 character overlap
 
 ## Key Functions
@@ -54,5 +54,5 @@ The app maintains several session state variables:
 
 Based on the imports, install these packages:
 ```bash
-pip install streamlit langchain-google-genai langchain-community langchain faiss-cpu
+pip install streamlit langchain-openai langchain-community langchain faiss-cpu openai tiktoken
 ```
