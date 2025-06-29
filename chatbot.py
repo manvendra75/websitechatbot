@@ -37,17 +37,28 @@ def extract_pdf_text(pdf_files):
     """Extract text from uploaded PDF files"""
     text_content = []
     try:
-        for pdf_file in pdf_files:
+        st.write(f"🔄 Processing {len(pdf_files)} PDF files...")
+        for i, pdf_file in enumerate(pdf_files):
+            st.write(f"📄 Processing {pdf_file.name}...")
             pdf_reader = PdfReader(pdf_file)
             pdf_text = ""
-            for page in pdf_reader.pages:
-                pdf_text += page.extract_text()
+            for page_num, page in enumerate(pdf_reader.pages):
+                page_text = page.extract_text()
+                pdf_text += page_text
+                st.write(f"  Page {page_num + 1}: {len(page_text)} characters")
+            
+            st.write(f"  Total text length: {len(pdf_text)} characters")
             
             if pdf_text.strip():  # Only add if there's actual content
                 text_content.append({
                     'filename': pdf_file.name,
                     'content': pdf_text
                 })
+                st.success(f"✅ Extracted text from {pdf_file.name}")
+            else:
+                st.warning(f"⚠️ No text found in {pdf_file.name}")
+        
+        st.write(f"📊 Successfully processed {len(text_content)} PDF files with content")
         return text_content
     except Exception as e:
         st.error(f"Error extracting PDF text: {str(e)}")
@@ -85,6 +96,10 @@ def load_website(url):
 
 def create_vectorstore(_website_data, _pdf_files=None):
     """Create vector store from website data and optional PDF files"""
+    st.write(f"🔧 Creating vector store...")
+    st.write(f"  Website data: {len(_website_data) if _website_data else 0} documents")
+    st.write(f"  PDF files: {len(_pdf_files) if _pdf_files else 0} files")
+    
     all_documents = []
     
     # Add website documents if available
