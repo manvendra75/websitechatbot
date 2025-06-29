@@ -37,28 +37,18 @@ def extract_pdf_text(pdf_files):
     """Extract text from uploaded PDF files"""
     text_content = []
     try:
-        st.write(f"🔄 Processing {len(pdf_files)} PDF files...")
-        for i, pdf_file in enumerate(pdf_files):
-            st.write(f"📄 Processing {pdf_file.name}...")
+        for pdf_file in pdf_files:
             pdf_reader = PdfReader(pdf_file)
             pdf_text = ""
-            for page_num, page in enumerate(pdf_reader.pages):
-                page_text = page.extract_text()
-                pdf_text += page_text
-                st.write(f"  Page {page_num + 1}: {len(page_text)} characters")
-            
-            st.write(f"  Total text length: {len(pdf_text)} characters")
+            for page in pdf_reader.pages:
+                pdf_text += page.extract_text()
             
             if pdf_text.strip():  # Only add if there's actual content
                 text_content.append({
                     'filename': pdf_file.name,
                     'content': pdf_text
                 })
-                st.success(f"✅ Extracted text from {pdf_file.name}")
-            else:
-                st.warning(f"⚠️ No text found in {pdf_file.name}")
         
-        st.write(f"📊 Successfully processed {len(text_content)} PDF files with content")
         return text_content
     except Exception as e:
         st.error(f"Error extracting PDF text: {str(e)}")
@@ -96,10 +86,6 @@ def load_website(url):
 
 def create_vectorstore(_website_data, _pdf_files=None):
     """Create vector store from website data and optional PDF files"""
-    st.write(f"🔧 Creating vector store...")
-    st.write(f"  Website data: {len(_website_data) if _website_data else 0} documents")
-    st.write(f"  PDF files: {len(_pdf_files) if _pdf_files else 0} files")
-    
     all_documents = []
     
     # Add website documents if available
@@ -114,13 +100,6 @@ def create_vectorstore(_website_data, _pdf_files=None):
         try:
             # Extract text from PDFs
             pdf_text_data = extract_pdf_text(_pdf_files)
-            st.write(f"📄 Extracted text from {len(pdf_text_data)} PDF files")
-            
-            # Show preview of PDF content for debugging
-            for i, pdf_data in enumerate(pdf_text_data[:2]):  # Show first 2 PDFs
-                preview = pdf_data['content'][:500] + "..." if len(pdf_data['content']) > 500 else pdf_data['content']
-                st.text(f"PDF {i+1} preview: {preview}")
-            
             # Convert to Document objects
             pdf_documents = pdf_to_documents(pdf_text_data)
             all_documents.extend(pdf_documents)
@@ -171,18 +150,21 @@ def initialize_conversation(vectorstore):
         # Initialize LLM
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Create a simple prompt template
-        prompt_template = """Use the following context to answer the question. If you cannot find the answer in the context, say so.
+        # Create a prompt template with conversation history
+        prompt_template = """Use the following context to answer the question. Consider the conversation history for context, but focus on the current question.
 
 Context: {context}
 
-Question: {question}
+Conversation History:
+{chat_history}
+
+Current Question: {question}
 
 Answer:"""
         
         prompt = PromptTemplate(
             template=prompt_template,
-            input_variables=["context", "question"]
+            input_variables=["context", "chat_history", "question"]
         )
         
         # Create simple LLM chain
@@ -242,24 +224,32 @@ if st.session_state.processComplete:
                         retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 6})
                         source_docs = retriever.get_relevant_documents(user_input)
                         
-                        # Debug: Show what was retrieved
-                        pdf_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'pdf')
-                        website_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'website')
-                        st.caption(f"🔍 Retrieved: {website_docs_found} website chunks, {pdf_docs_found} PDF chunks")
-                        
-                        # If no PDF docs found, try searching specifically for PDF content
-                        if pdf_docs_found == 0 and st.session_state.vectorstore:
-                            # Try a broader search to see if ANY PDF content exists
-                            all_docs = st.session_state.vectorstore.similarity_search("", k=20)
-                            total_pdf_chunks = sum(1 for doc in all_docs if doc.metadata.get('type') == 'pdf')
-                            st.caption(f"📊 Total PDF chunks in vector store: {total_pdf_chunks}")
+                        # Optional: Show what was retrieved (can be removed for cleaner UI)
+                        # pdf_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'pdf')
+                        # website_docs_found = sum(1 for doc in source_docs if doc.metadata.get('type') == 'website')
+                        # st.caption(f"🔍 Retrieved: {website_docs_found} website chunks, {pdf_docs_found} PDF chunks")
                         
                         # Combine context from retrieved documents
                         context = "\n\n".join([doc.page_content for doc in source_docs])
                         
+                        # Format chat history for the prompt
+                        chat_history = ""
+                        if st.session_state.chat_history:
+                            # Get last 6 messages (3 exchanges) for context
+                            recent_history = st.session_state.chat_history[-6:]
+                            for msg in recent_history:
+                                role = "Human" if msg["role"] == "user" else "Assistant"
+                                chat_history += f"{role}: {msg['content']}\n"
+                        else:
+                            chat_history = "No previous conversation."
+                        
                         # Get response from LLM chain
                         llm_chain = st.session_state.conversation["llm_chain"]
-                        result = llm_chain.run(context=context, question=user_input)
+                        result = llm_chain.run(
+                            context=context, 
+                            chat_history=chat_history,
+                            question=user_input
+                        )
                         response = result
                         st.write(response)
                         
