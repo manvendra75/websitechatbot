@@ -74,8 +74,6 @@ if "processComplete" not in st.session_state:
     st.session_state.processComplete = None
 if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
-if "pdf_docs" not in st.session_state:
-    st.session_state.pdf_docs = None
 
 # Force reset conversation if it's the old type
 if "conversation" in st.session_state and hasattr(st.session_state.conversation, 'memory'):
@@ -189,6 +187,43 @@ def create_vectorstore(_website_data, _pdf_files=None):
         st.error(f"Error creating vector store: {str(e)}")
         return None
 
+def create_vectorstore_from_documents(documents):
+    """Create vector store from a list of Document objects"""
+    if not documents:
+        st.warning("No documents available to create vector store")
+        return None
+    
+    try:
+        # Add type metadata to website documents if not already set
+        for doc in documents:
+            if 'type' not in doc.metadata:
+                doc.metadata['type'] = 'website'
+        
+        # Split all documents
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, 
+            chunk_overlap=200
+        )
+        splits = text_splitter.split_documents(documents)
+        
+        # Create embeddings
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        
+        # Create vector store
+        vectorstore = FAISS.from_documents(splits, embeddings)
+        
+        # Log what was processed
+        website_docs = sum(1 for doc in documents if doc.metadata.get('type') == 'website')
+        pdf_docs = sum(1 for doc in documents if doc.metadata.get('type') == 'pdf')
+        total_chunks = len(splits)
+        
+        st.success(f"✅ Loaded {website_docs} website pages and {pdf_docs} PDF documents ({total_chunks} chunks)")
+        
+        return vectorstore
+    except Exception as e:
+        st.error(f"Error creating vector store: {str(e)}")
+        return None
+
 def initialize_conversation(vectorstore):
     """Initialize a simple LLM chain to avoid memory issues"""
     if vectorstore is None:
@@ -223,23 +258,72 @@ Answer:"""
         st.error(f"Error initializing conversation: {str(e)}")
         return None
 
-# Main app logic
-url = "https://www.holidayme.com"
+# Backend configuration - hardcoded data sources
+BACKEND_CONFIG = {
+    "website_url": "https://www.holidayme.com",
+    "pdf_files": [
+        # Add your PDF file paths here when you have them
+        # "/path/to/your/pdf1.pdf",
+        # "/path/to/your/pdf2.pdf",
+    ]
+}
 
-# Load and process website + PDFs
-with st.spinner("Loading content..."):
-    if st.session_state.vectorstore is None:
-        website_data = load_website(url)
+@st.cache_data
+def load_backend_pdfs():
+    """Load PDFs from backend file system"""
+    pdf_documents = []
+    
+    for pdf_path in BACKEND_CONFIG["pdf_files"]:
+        try:
+            if os.path.exists(pdf_path):
+                # Read PDF file from file system
+                with open(pdf_path, 'rb') as file:
+                    pdf_reader = PdfReader(file)
+                    pdf_text = ""
+                    for page in pdf_reader.pages:
+                        pdf_text += page.extract_text()
+                    
+                    if pdf_text.strip():
+                        # Create Document object
+                        doc = Document(
+                            page_content=pdf_text,
+                            metadata={
+                                'source': os.path.basename(pdf_path),
+                                'type': 'pdf',
+                                'backend_file': True
+                            }
+                        )
+                        pdf_documents.append(doc)
+            else:
+                st.warning(f"Backend PDF file not found: {pdf_path}")
+                
+        except Exception as e:
+            st.error(f"Error loading backend PDF {pdf_path}: {str(e)}")
+    
+    return pdf_documents
+
+# Main app logic - automatic loading
+if st.session_state.vectorstore is None:
+    with st.spinner("🔄 Loading HolidayMe content..."):
+        # Load website data
+        website_data = load_website(BACKEND_CONFIG["website_url"])
         
-        # Create vector store with both website and PDF data
-        if website_data or st.session_state.pdf_docs:
-            st.session_state.vectorstore = create_vectorstore(
-                website_data, 
-                st.session_state.pdf_docs
-            )
+        # Load backend PDFs (if any)
+        backend_pdfs = load_backend_pdfs()
+        
+        # Create vector store with website and backend PDF data
+        if website_data or backend_pdfs:
+            # Combine website data with backend PDFs
+            all_documents = []
+            if website_data:
+                all_documents.extend(website_data)
+            if backend_pdfs:
+                all_documents.extend(backend_pdfs)
+            
+            st.session_state.vectorstore = create_vectorstore_from_documents(all_documents)
             st.session_state.processComplete = True
         else:
-            st.warning("No website content or PDF files available to process")
+            st.warning("Unable to load HolidayMe content. Please refresh the page.")
 
 # Initialize conversation if needed
 if st.session_state.conversation is None and st.session_state.vectorstore is not None:
@@ -333,70 +417,25 @@ if st.session_state.processComplete:
                 except Exception as e:
                     st.error(f"Error generating response: {str(e)}")
 
-# Sidebar
-with st.sidebar:
-    st.header("ℹ️ About")
-    st.write(f"Currently chatting with: {url}")
-    
-    # Option to change URL
-    new_url = st.text_input("Enter a different URL:", value=url)
-    if st.button("Load New Website"):
-        if new_url != url:
-            # Reset session state
-            st.session_state.vectorstore = None
-            st.session_state.conversation = None
+# Optional: Minimal sidebar for admin functions only
+# (Remove this entire block for completely clean interface)
+if st.secrets.get("SHOW_ADMIN_PANEL", False):  # Only show if admin mode enabled
+    with st.sidebar:
+        st.header("🔧 Admin Panel")
+        
+        if st.button("🗑️ Clear Chat History"):
             st.session_state.chat_history = []
-            st.session_state.processComplete = None
-            st.session_state.pdf_docs = None
             st.rerun()
-    
-    st.divider()
-    
-    # PDF Upload Section
-    st.header("📄 PDF Documents")
-    st.write("Upload PDFs to augment website information")
-    
-    uploaded_files = st.file_uploader(
-        "Choose PDF files",
-        type="pdf",
-        accept_multiple_files=True,
-        help="Upload one or more PDF files to add to the knowledge base"
-    )
-    
-    if uploaded_files and uploaded_files != st.session_state.pdf_docs:
-        st.session_state.pdf_docs = uploaded_files
-        # Reset vector store when new PDFs are uploaded
-        st.session_state.vectorstore = None
-        st.session_state.conversation = None
-        st.session_state.processComplete = None
-        st.rerun()
-    
-    if st.button("Process PDFs") and st.session_state.pdf_docs:
-        with st.spinner("Processing PDF documents..."):
-            # Reset vector store to rebuild with PDFs
+        
+        if st.button("🔄 Reload Content"):
             st.session_state.vectorstore = None
             st.session_state.conversation = None
             st.session_state.processComplete = None
             st.rerun()
-    
-    st.divider()
-    
-    # Clear chat button
-    if st.button("Clear Chat History"):
-        st.session_state.chat_history = []
-        st.rerun()
-    
-    # Display status
-    st.header("📊 Status")
-    if st.session_state.processComplete:
-        st.success("✅ Website loaded and ready!")
-    else:
-        st.info("⏳ Loading website content...")
-    
-    # PDF status
-    if st.session_state.pdf_docs:
-        st.success(f"📄 {len(st.session_state.pdf_docs)} PDF(s) uploaded")
-        for pdf in st.session_state.pdf_docs:
-            st.text(f"• {pdf.name}")
-    else:
-        st.info("📄 No PDFs uploaded")
+        
+        st.divider()
+        st.caption(f"📊 Data Source: {BACKEND_CONFIG['website_url']}")
+        if st.session_state.processComplete:
+            st.caption("✅ Content loaded successfully")
+        else:
+            st.caption("⏳ Loading content...")

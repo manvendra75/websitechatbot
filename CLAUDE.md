@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Streamlit-based website chatbot that uses OpenAI's GPT-4 and embeddings to create a conversational interface for querying website content and uploaded PDF documents. The application scrapes a specified website, processes uploaded PDFs, creates vector embeddings of the combined content, and provides a chat interface where users can ask questions that draw from both website and PDF information.
+This is a Streamlit-based website chatbot that uses OpenAI's GPT-4 and embeddings to create a conversational interface for querying website content and backend PDF documents. The application automatically loads content from a configured website and backend PDF files, creates vector embeddings of the combined content, and provides a clean chat interface optimized for iframe embedding on production websites.
 
 ## Architecture
 
@@ -17,13 +17,13 @@ The application is built using:
 - **PyPDF2** - PDF text extraction
 
 The main flow:
-1. Load website content using WebBaseLoader
-2. Extract text from uploaded PDF files using PyPDF2
+1. Load website content using WebBaseLoader from configured URL
+2. Load backend PDF files from configured file system paths
 3. Combine website and PDF content into unified document collection
 4. Split combined content into chunks using RecursiveCharacterTextSplitter
 5. Create embeddings and store in FAISS vector database
 6. Initialize custom LLM chain with conversation memory
-7. Handle user queries through the chat interface with source attribution
+7. Handle user queries through clean chat interface with source attribution
 
 ## Running the Application
 
@@ -34,38 +34,50 @@ streamlit run chatbot.py
 ## Configuration
 
 - OpenAI API key is configured in `.streamlit/secrets.toml` with the key `OPENAI_API_KEY`
-- Default website URL is hardcoded to "https://www.holidayme.com" in `chatbot.py:90`
+- Website URL and PDF files configured in `BACKEND_CONFIG` dictionary in `chatbot.py`
+- Admin panel visibility controlled by `SHOW_ADMIN_PANEL` in secrets.toml
 - Embedding model: `text-embedding-3-small`
 - Chat model: `gpt-4o` with temperature 0.7
 - Text splitting: 1000 character chunks with 200 character overlap
 
+### Backend Content Configuration
+```python
+BACKEND_CONFIG = {
+    "website_url": "https://www.holidayme.com",
+    "pdf_files": [
+        "docs/umrah-services.pdf",
+        "docs/dubai-packages.pdf",
+        # Add more PDF paths as needed
+    ]
+}
+```
+
 ## Key Functions
 
 - `load_website(url)` - Web scraping with caching
-- `extract_pdf_text(pdf_files)` - Extract text from uploaded PDF files using PyPDF2
-- `pdf_to_documents(pdf_text_data)` - Convert PDF text to LangChain Document objects
-- `create_vectorstore(website_data, pdf_files)` - Vector database creation from combined website and PDF content
+- `load_backend_pdfs()` - Load PDF files from configured backend file system paths
+- `create_vectorstore_from_documents(documents)` - Vector database creation from document list
 - `initialize_conversation(vectorstore)` - Custom LLM chain setup with conversation memory
 
-## PDF Processing
+## Backend Content Management
 
-The application supports uploading multiple PDF files to augment website information:
+The application loads content automatically from backend-configured sources:
 
-1. **Upload Interface**: Sidebar file uploader accepts multiple PDF files
-2. **Text Extraction**: PyPDF2 extracts text from each page of uploaded PDFs
-3. **Document Conversion**: PDF text is converted to LangChain Document objects with metadata
-4. **Source Tracking**: PDF documents are tagged with `type: 'pdf'` and `source: filename`
-5. **Combined Vector Store**: Website and PDF content are embedded together in single FAISS database
-6. **Source Attribution**: Responses show which sources (website or specific PDFs) provided information
+1. **Website Loading**: Automatically scrapes configured website URL
+2. **PDF Loading**: Loads PDF files from configured file system paths
+3. **Document Processing**: Converts all content to LangChain Document objects with metadata
+4. **Source Tracking**: Documents tagged with `type: 'website'` or `type: 'pdf'` and source information
+5. **Combined Vector Store**: All content embedded together in single FAISS database
+6. **Source Attribution**: Responses show which sources provided information
+7. **Clean Interface**: No upload widgets - purely chat-focused UI
 
 ## Session State Management
 
 The app maintains several session state variables:
 - `conversation` - Custom LLM chain implementation (dict with llm_chain and vectorstore)
 - `chat_history` - List of chat messages with role/content structure
-- `processComplete` - Website and PDF processing status flag
+- `processComplete` - Content loading status flag
 - `vectorstore` - FAISS vector database instance containing combined content
-- `pdf_docs` - Currently uploaded PDF files list
 
 ## Conversation Memory
 
@@ -84,16 +96,18 @@ pip install streamlit langchain-openai langchain-community langchain faiss-cpu o
 
 ## Usage Workflow
 
-1. **Initial Setup**: App loads website content automatically from hardcoded URL
-2. **PDF Upload**: Use sidebar to upload one or more PDF files 
-3. **Processing**: Click "Process PDFs" to rebuild vector store with combined content
-4. **Querying**: Ask questions that can be answered from website or PDF content
-5. **Source Review**: Expand "📚 Sources" to see which documents informed the response
-6. **Memory**: Follow-up questions will reference previous conversation context
+1. **Automatic Loading**: App automatically loads website and backend PDF content on startup
+2. **Ready to Chat**: Clean interface with chat input immediately available
+3. **Querying**: Ask questions that can be answered from website or PDF content
+4. **Source Review**: Expand "📚 Sources" to see which documents informed the response
+5. **Memory**: Follow-up questions will reference previous conversation context
+6. **Admin Functions**: Optional admin panel for clearing chat or reloading content
 
 ## Technical Notes
 
-- **No Caching**: Vector store creation is not cached to allow dynamic PDF updates
+- **Backend Management**: All content sources configured in code, not user uploads
+- **Clean Interface**: No file upload widgets, optimized for iframe embedding
 - **Custom RAG**: Uses manual retrieval + LLM chain instead of ConversationalRetrievalChain
-- **Error Handling**: Graceful degradation if PDFs cannot be processed
+- **Error Handling**: Graceful degradation if backend PDFs cannot be processed
 - **Memory Conflicts**: Avoided by using single output key and manual history management
+- **Production Ready**: Optimized for embedding as chat widget on websites
