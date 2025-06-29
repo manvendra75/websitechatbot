@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HolidayMe Chat Integration</title>
+    <style>
+        /* Chat Button Styling */
+        .holidayme-chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .holidayme-chat-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Chat Window Styling */
+        .holidayme-chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 400px;
+            height: 600px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            display: none;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+        }
+
+        .holidayme-chat-window.open {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chat Header */
+        .holidayme-chat-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .holidayme-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .holidayme-chat-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Chat iframe */
+        .holidayme-chat-iframe {
+            width: 100%;
+            height: calc(100% - 60px);
+            border: none;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .holidayme-chat-window {
+                width: calc(100vw - 40px);
+                height: calc(100vh - 100px);
+                right: 20px;
+                bottom: 90px;
+            }
+        }
+
+        /* Notification badge */
+        .holidayme-chat-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Chat Button -->
+    <button class="holidayme-chat-button" id="holidaymeChatButton">
+        🏖️
+        <!-- Optional notification badge -->
+        <!-- <div class="holidayme-chat-badge">1</div> -->
+    </button>
+
+    <!-- Chat Window -->
+    <div class="holidayme-chat-window" id="holidaymeChatWindow">
+        <div class="holidayme-chat-header">
+            <h3>🏖️ HolidayMe Assistant</h3>
+            <button class="holidayme-chat-close" id="holidaymeChatClose">×</button>
+        </div>
+        <iframe 
+            src="YOUR_STREAMLIT_APP_URL" 
+            class="holidayme-chat-iframe"
+            allow="camera; microphone"
+            title="HolidayMe Chat Assistant">
+        </iframe>
+    </div>
+
+    <script>
+        // Chat functionality
+        class HolidaymeChatWidget {
+            constructor() {
+                this.chatButton = document.getElementById('holidaymeChatButton');
+                this.chatWindow = document.getElementById('holidaymeChatWindow');
+                this.chatClose = document.getElementById('holidaymeChatClose');
+                this.isOpen = false;
+                
+                this.init();
+            }
+
+            init() {
+                // Event listeners
+                this.chatButton.addEventListener('click', () => this.toggleChat());
+                this.chatClose.addEventListener('click', () => this.closeChat());
+                
+                // Close on escape key
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && this.isOpen) {
+                        this.closeChat();
+                    }
+                });
+
+                // Close when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (this.isOpen && 
+                        !this.chatWindow.contains(e.target) && 
+                        !this.chatButton.contains(e.target)) {
+                        this.closeChat();
+                    }
+                });
+            }
+
+            toggleChat() {
+                if (this.isOpen) {
+                    this.closeChat();
+                } else {
+                    this.openChat();
+                }
+            }
+
+            openChat() {
+                this.chatWindow.classList.add('open');
+                this.chatButton.style.transform = 'rotate(45deg)';
+                this.isOpen = true;
+                
+                // Track analytics (optional)
+                this.trackEvent('chat_opened');
+            }
+
+            closeChat() {
+                this.chatWindow.classList.remove('open');
+                this.chatButton.style.transform = 'rotate(0deg)';
+                this.isOpen = false;
+                
+                // Track analytics (optional)
+                this.trackEvent('chat_closed');
+            }
+
+            // Optional analytics tracking
+            trackEvent(eventName) {
+                // Add your analytics tracking here
+                // Example: Google Analytics, Mixpanel, etc.
+                console.log(`HolidayMe Chat: ${eventName}`);
+            }
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new HolidaymeChatWidget();
+        });
+
+        // Auto-open after delay (optional)
+        // setTimeout(() => {
+        //     document.getElementById('holidaymeChatButton').click();
+        // }, 5000);
+    </script>
+</body>
+</html>

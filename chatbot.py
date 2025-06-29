@@ -13,9 +13,57 @@ from langchain.schema import Document
 # Set OpenAI API Key
 os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-# Page configuration
-st.set_page_config(page_title="Chat with US", page_icon="📚")
-st.title("Chat with our website 📚")
+# Page configuration for iframe embedding
+st.set_page_config(
+    page_title="HolidayMe Assistant", 
+    page_icon="🏖️",
+    layout="wide",
+    initial_sidebar_state="collapsed"  # Start with sidebar collapsed for cleaner iframe
+)
+
+# Custom CSS for iframe optimization
+st.markdown("""
+<style>
+    /* Hide Streamlit branding and menu for cleaner iframe */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Optimize for iframe embedding */
+    .stApp {
+        margin: 0;
+        padding: 10px;
+    }
+    
+    /* Compact header */
+    .main-header {
+        background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+    
+    /* Chat container styling */
+    .chat-container {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px;
+        background: #f9fafb;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Compact header for iframe
+st.markdown("""
+<div class="main-header">
+    <h2>🏖️ HolidayMe Assistant</h2>
+    <p>Ask me anything about our services and travel packages!</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Initialize session state variables
 if "conversation" not in st.session_state:
@@ -199,13 +247,18 @@ if st.session_state.conversation is None and st.session_state.vectorstore is not
 
 # Display chat interface
 if st.session_state.processComplete:
+    # Chat container with custom styling
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    
     # Display chat history
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.write(message["content"])
     
-    # Chat input
-    user_input = st.chat_input("Ask me anything about the website...")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Chat input with placeholder for HolidayMe
+    user_input = st.chat_input("Ask about our travel packages, services, or any questions...")
     
     if user_input:
         # Add user message to chat history
