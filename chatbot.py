@@ -196,8 +196,8 @@ if st.session_state.processComplete:
             with st.spinner("Thinking..."):
                 try:
                     if st.session_state.conversation:
-                        # Get the answer from RetrievalQA (uses 'query' key instead of 'question')
-                        result = st.session_state.conversation({"query": user_input})
+                        # Get the answer from RetrievalQA (uses 'question' key)
+                        result = st.session_state.conversation({"question": user_input})
                         response = result['result']  # RetrievalQA returns 'result' instead of 'answer'
                         st.write(response)
                         
