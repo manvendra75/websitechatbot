@@ -138,10 +138,11 @@ def initialize_conversation(vectorstore):
         # Initialize LLM with enhanced system prompt
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Create memory
+        # Create memory with output key specified
         memory = ConversationBufferMemory(
             memory_key="chat_history", 
-            return_messages=True
+            return_messages=True,
+            output_key="answer"  # Specify which output to store in memory
         )
         
         # Create conversation chain
@@ -149,8 +150,7 @@ def initialize_conversation(vectorstore):
             llm=llm,
             retriever=vectorstore.as_retriever(search_kwargs={"k": 6}),  # Retrieve more docs
             memory=memory,
-            return_source_documents=True,  # Include source information
-            output_key="answer"  # Specify which key to store in memory
+            return_source_documents=True  # Include source information
         )
         
         return qa
