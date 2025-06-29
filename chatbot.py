@@ -138,19 +138,17 @@ def initialize_conversation(vectorstore):
         # Initialize LLM with enhanced system prompt
         llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
         
-        # Create memory with output key specified
+        # Create memory
         memory = ConversationBufferMemory(
             memory_key="chat_history", 
-            return_messages=True,
-            output_key="answer"  # Specify which output to store in memory
+            return_messages=True
         )
         
-        # Create conversation chain
+        # Create conversation chain without return_source_documents to avoid memory issues
         qa = ConversationalRetrievalChain.from_llm(
             llm=llm,
             retriever=vectorstore.as_retriever(search_kwargs={"k": 6}),  # Retrieve more docs
-            memory=memory,
-            return_source_documents=True  # Include source information
+            memory=memory
         )
         
         return qa
@@ -203,21 +201,28 @@ if st.session_state.processComplete:
             with st.spinner("Thinking..."):
                 try:
                     if st.session_state.conversation:
+                        # Get the answer from conversation
                         result = st.session_state.conversation({"question": user_input})
                         response = result['answer']
                         st.write(response)
                         
-                        # Show source information if available
-                        if 'source_documents' in result and result['source_documents']:
-                            with st.expander("📚 Sources"):
-                                sources = set()  # Use set to avoid duplicates
-                                for doc in result['source_documents']:
-                                    source_type = doc.metadata.get('type', 'unknown')
-                                    source_name = doc.metadata.get('source', 'Unknown source')
-                                    sources.add(f"{source_type.title()}: {source_name}")
-                                
-                                for source in sorted(sources):
-                                    st.text(f"• {source}")
+                        # Manually retrieve source documents for display
+                        try:
+                            retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 4})
+                            source_docs = retriever.get_relevant_documents(user_input)
+                            
+                            if source_docs:
+                                with st.expander("📚 Sources"):
+                                    sources = set()  # Use set to avoid duplicates
+                                    for doc in source_docs:
+                                        source_type = doc.metadata.get('type', 'unknown')
+                                        source_name = doc.metadata.get('source', 'Unknown source')
+                                        sources.add(f"{source_type.title()}: {source_name}")
+                                    
+                                    for source in sorted(sources):
+                                        st.text(f"• {source}")
+                        except Exception as source_error:
+                            st.text("Sources not available")
                         
                         # Add assistant response to chat history
                         st.session_state.chat_history.append({
