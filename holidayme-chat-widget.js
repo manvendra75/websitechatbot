@@ -234,6 +234,8 @@ window.HolidaymeChatWidget = (function() {
                     class="holidayme-chat-iframe"
                     src="${config.streamlitUrl}" 
                     title="HolidayMe Chat Assistant"
+                    allow="camera; microphone; clipboard-read; clipboard-write"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
                     style="display: none;">
                 </iframe>
             </div>
@@ -256,8 +258,18 @@ window.HolidaymeChatWidget = (function() {
         
         // Iframe load event
         elements.iframe.addEventListener('load', function() {
-            elements.loading.style.display = 'none';
-            elements.iframe.style.display = 'block';
+            setTimeout(() => {
+                elements.loading.style.display = 'none';
+                elements.iframe.style.display = 'block';
+            }, 2000); // Give Streamlit time to fully load
+        });
+        
+        // Listen for messages from iframe
+        window.addEventListener('message', function(event) {
+            if (event.data === 'iframe-loaded') {
+                elements.loading.style.display = 'none';
+                elements.iframe.style.display = 'block';
+            }
         });
         
         // Close on escape key

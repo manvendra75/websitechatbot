@@ -21,6 +21,14 @@ st.set_page_config(
     initial_sidebar_state="collapsed"  # Start with sidebar collapsed for cleaner iframe
 )
 
+# Allow iframe embedding
+st.markdown("""
+<script>
+    // Remove X-Frame-Options restrictions
+    window.parent.postMessage('iframe-loaded', '*');
+</script>
+""", unsafe_allow_html=True)
+
 # Custom CSS for iframe optimization
 st.markdown("""
 <style>
